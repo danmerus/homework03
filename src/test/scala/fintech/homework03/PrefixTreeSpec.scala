@@ -3,7 +3,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class PrefixTreeSpec extends FlatSpec with Matchers {
   it should "work well with strings" in {
-    val tree: PrefixTree[Char, Int] = ???
+    val tree: PrefixTree[Char, Int] = new TreeNode[Char,Int]( None,"" )
 
     val with42: PrefixTree[Char, Int] = tree.put("abcd", 42)
     with42.sub("ab").sub("cd").get should be (42)
