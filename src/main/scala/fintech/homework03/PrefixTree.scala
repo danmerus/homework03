@@ -13,98 +13,31 @@ trait PrefixTree[K, +V] {
   def get: V
 }
 
-class TreeNode[K, V](var element : Option[V] = None,
-                     var location : Seq[K]) extends PrefixTree[K, V] {
-
-  var children: Map[K, TreeNode[K, V]] =  Map[K, TreeNode[K, V]]()
+class TreeNode[K, V](val element : Option[V] = None,
+                     children: Map[K, PrefixTree[K, V]] = Map.empty[K, PrefixTree[K, V]]) extends PrefixTree[K, V] {
 
   def get: V = element.get
 
-  def put[U >: V](path: Seq[K], value: U): PrefixTree[K, U] = new PutObj(path, value, new TreeNode[K,U](this.element, this.location))
+  def put[U >: V](path: Seq[K], value: U): PrefixTree[K, U] = path match {
+    case Seq() => new TreeNode[K, U](Option(value), this.children)
+    case Seq(head, _*) => children.get(head) match {
+      case Some(v) => new TreeNode[K, U](
+        this.element, children + (path.head -> children(path.head).put(path.tail, value)))
+      case None => new TreeNode[K, U](
+        this.element, children + (path.head -> new TreeNode[K, U]().put(path.tail, value)))
+    }
+  }
 
   override def toString: String = {
     this.children.mkString
   }
 
-  override def sub(path: Seq[K]): PrefixTree[K, V] = {
-      if (this.location == path) {
-        this
-      } else {
-        def helperSub(node: TreeNode[K, V], keyIndex: Int): TreeNode[K, V] = {
-          if (node.children.isDefinedAt(path(keyIndex))) {
-            if (keyIndex + 1 == path.length) {
-              node.children(path(keyIndex))
-            } else {
-              helperSub(node.children(path(keyIndex)), keyIndex + 1)
-            }
-          } else {
-            new TreeNode[K, V](None, Seq[K]())
-          }
-        }
-        helperSub(this, 0)
-      }
+  override def sub(path: Seq[K]): PrefixTree[K, V] = path match {
+    case Seq() => this
+    case Seq(head, _*) => children.get(head) match {
+      case Some(_) => children(path.head).sub(path.tail)
+      case None => new TreeNode[K, V]()
+    }
   }
+
 }
-
-class PutObj[K,V](location: Seq[K], element: V = None, tree: TreeNode[K,V]) extends PrefixTree[K,V] {
-
-  var children: Map[K, TreeNode[K, V]] =  Map[K, TreeNode[K, V]]()
-  helperPut(tree, 0)
-  def helperPut(node: TreeNode[K,V], keyIndex: Int) {
-    if (keyIndex == location.length) {
-      node.element = Option(element)
-    }
-    else {
-      if (node.children.isDefinedAt(location(keyIndex))) {
-        helperPut(node.children(location(keyIndex)),keyIndex + 1)
-      } else {
-        val result = new TreeNode[K, V](None, location :+ location(keyIndex))
-        node.children = node.children + ((location(keyIndex), result))
-        helperPut(result, keyIndex + 1)
-      }
-    }
-  }
-
-  override def put[U >: V](path: Seq[K], value: U): PrefixTree[K, U] =
-    new PutObj(path, value, new TreeNode[K,U](Option(this.element), this.location))
-
-  override def sub(path: Seq[K]): PrefixTree[K, V] = {
-    if (tree.location == path) {
-      tree
-    } else {
-      def helperSub(node: TreeNode[K, V], keyIndex: Int): TreeNode[K, V] = {
-        if (node.children.isDefinedAt(path(keyIndex))) {
-          if (keyIndex + 1 == path.length) {
-            node.children(path(keyIndex))
-          } else {
-            helperSub(node.children(path(keyIndex)), keyIndex + 1)
-          }
-        } else {
-          new TreeNode[K, V](None, Seq[K]())
-        }
-      }
-      helperSub(tree, 0)
-    }
-  }
-
-  override def get: V =  tree.element.get
-
-  override def toString: String = {
-    tree.children.mkString
-  }
-}
-
-// object test {
-//   def main (args: Array[String] ): Unit = {
-//     val tree: PrefixTree[Char, Int] = new TreeNode[Char,Int]( None,"" )
-//
-//     val with42: PrefixTree[Char, Int] = tree.put("abcd", 42)
-//     println(with42)
-//     println(with42.sub("ab").sub("cd").get)
-//
-//     val withDouble: PrefixTree[Char, AnyVal] = with42.put("abcde", 13.0)
-//
-//     println(with42.sub("abcd").get)
-//     println(withDouble.sub("ab").sub("cde").get)
-//   }
-// }
